@@ -32,6 +32,7 @@ static class RedisPing
                 if(password != null)
                 {
                     await WriteSimpleMessage(connection.Output, $"AUTH {password}");
+                    // a "success" for this would be a response that says "+OK"
                 }
 
                 await WriteSimpleMessage(connection.Output, "PING");
@@ -81,6 +82,7 @@ static class RedisPing
     private static async Task WriteSimpleMessage(IPipeWriter output, string command)
     {
         // keep things simple: using the text protocol guarantees a text-protocol response
+        // (in real code we'd use the RESP format, but ... meh)
         await Console.Out.WriteLineAsync($"sending '{command}'...");
         var buffer = output.Alloc();
         
