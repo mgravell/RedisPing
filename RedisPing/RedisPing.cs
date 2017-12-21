@@ -31,12 +31,16 @@ static class RedisPing
             {
                 if(password != null)
                 {
-                    await WriteSimpleMessage(connection.Output, $"AUTH {password}");
+                    await WriteSimpleMessage(connection.Output, $"AUTH \"{password}\"");
                     // a "success" for this would be a response that says "+OK"
                 }
 
+                await WriteSimpleMessage(connection.Output, "ECHO \"noisy in here\"");
+                // note that because of RESP, this actually gives 2 replies; don't worry about it :)
+
                 await WriteSimpleMessage(connection.Output, "PING");
                 
+
                 var input = connection.Input;
                 while (true)
                 {
@@ -59,7 +63,7 @@ static class RedisPing
                         continue;
                     }
                     var reply = slice.GetAsciiString();
-                    await Console.Out.WriteLineAsync($"received: '{reply}'");
+                    await Console.Out.WriteLineAsync($"<< received: '{reply}'");
                     if(string.Equals(reply, "+PONG", StringComparison.OrdinalIgnoreCase))
                     {
                         await WriteSimpleMessage(connection.Output, "QUIT");
@@ -67,8 +71,8 @@ static class RedisPing
                     }
 
                     // input.Advance(cursor); // feels like this should work, but it doesn't 
-                    var incTerminator = buffer.Slice(slice.Length + 2);
-                    input.Advance(incTerminator.End);
+                    var incTerminator = buffer.Slice(0, slice.Length + 2);
+                    input.Advance(incTerminator.End, incTerminator.End);
 
                 }
             }
@@ -83,7 +87,7 @@ static class RedisPing
     {
         // keep things simple: using the text protocol guarantees a text-protocol response
         // (in real code we'd use the RESP format, but ... meh)
-        await Console.Out.WriteLineAsync($"sending '{command}'...");
+        await Console.Out.WriteLineAsync($">> sending '{command}'...");
         var buffer = output.Alloc();
         
         var arr = Encoding.ASCII.GetBytes($"{command}\r\n"); // there's a nice way to do this; I've forgotten
