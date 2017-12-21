@@ -13,16 +13,27 @@ static class RedisPing
     {
         try
         {
+            // need to put these somewhere that isn't the repo; maybe a json file that
+            // is in the .gitignore?
+            const int RedisPort = 6379;
             string host = "localhost";
+            string password = null; // <=== azure auth key
 
             await Console.Out.WriteLineAsync($"resolving ip of '{host}'...");
             var ip = (await Dns.GetHostAddressesAsync(host)).First();
 
-            const int RedisPort = 6379;
+            
+
+            
 
             await Console.Out.WriteLineAsync($"connecting to '{ip}:{RedisPort}'...");
             using (var connection = await SocketConnection.ConnectAsync(new IPEndPoint(ip, RedisPort)))
             {
+                if(password != null)
+                {
+                    await WriteSimpleMessage(connection.Output, $"AUTH {password}");
+                }
+
                 await WriteSimpleMessage(connection.Output, "PING");
                 
                 var input = connection.Input;
