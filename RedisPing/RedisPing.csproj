@@ -14,6 +14,7 @@
     <PackageReference Include="System.IO.Pipelines.Networking.Sockets" Version="0.1.0-e171221-1" />
     <PackageReference Include="System.IO.Pipelines.Text.Primitives" Version="0.1.0-e171221-1" />
     <PackageReference Include="System.Memory" Version="4.5.0-preview1-26021-02" />
+    <PackageReference Include="System.Text.Primitives" Version="0.1.0-e171222-1" />
   </ItemGroup>
 
 </Project>
