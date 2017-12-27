@@ -17,4 +17,8 @@
     <PackageReference Include="System.Text.Primitives" Version="0.1.0-e171222-1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Leto\Leto.csproj" />
+  </ItemGroup>
+
 </Project>
