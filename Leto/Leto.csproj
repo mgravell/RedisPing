@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Interop\OpenSsl\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Pipelines.Extensions" Version="0.1.0-e171221-1" />
+    <PackageReference Include="System.Memory" Version="4.5.0-preview1-26021-02" />
+  </ItemGroup>
+
+</Project>
