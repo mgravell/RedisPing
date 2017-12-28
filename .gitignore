@@ -2,3 +2,8 @@
 bin/
 obj/
 Tests/
+/openssl/libeay32.dll
+/openssl/libssl32.dll
+/openssl/openssl.exe
+/openssl/openssl.pdb
+/openssl/ssleay32.dll
