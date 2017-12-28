@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 static class RedisPing
@@ -21,6 +22,7 @@ static class RedisPing
         public int Port { get; set; }
         public string Password { get; set; }
         public bool UseTls { get; set; }
+        public string CertificatePath { get; set; }
     }
     private static bool ShowDetails
     {
@@ -35,20 +37,32 @@ static class RedisPing
     }
     static async Task Main()
     {
-        foreach(var path in Directory.EnumerateFiles("Tests", "*.json"))
+        var testRoot = "Tests";
+        foreach (var path in Directory.EnumerateFiles(testRoot, "*.json"))
         {
             try
             {
                 var json = File.ReadAllText(path);
                 var test = JsonConvert.DeserializeObject<TestCase>(json);
+                X509Certificate cert = null;
+                if (test.CertificatePath != null)
+                {
+                    cert = new X509Certificate2(Path.Combine(testRoot, test.CertificatePath));
+
+                }
+
                 await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
+                if(cert != null)
+                {
+                    await Console.Out.WriteLineAsync($"Client certificate: {cert.Subject}");
+                }
 
                 await Console.Error.WriteLineAsync("via TcpClient...");
-                await DoTheThingViaTcpClient(test.Host, test.Port, test.Password, test.UseTls);
+                await DoTheThingViaTcpClient(test.Host, test.Port, test.Password, test.UseTls, cert);
                 await Console.Error.WriteLineAsync();
 
                 await Console.Error.WriteLineAsync("via Pipelines...");
-                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls);
+                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls, cert);
                 await Console.Error.WriteLineAsync();
                 await Console.Error.WriteLineAsync();
             }
@@ -59,7 +73,7 @@ static class RedisPing
         }
     }
 
-    static async Task DoTheThingViaTcpClient(string host, int port, string password, bool useTls)
+    static async Task DoTheThingViaTcpClient(string host, int port, string password, bool useTls, X509Certificate cert)
     {
         try
         {
@@ -73,8 +87,18 @@ static class RedisPing
                 if(useTls)
                 {
                     await Console.Out.WriteLineAsync($"authenticating host...");
-                    var ssl = new SslStream(stream);
+                    LocalCertificateSelectionCallback certSelector = null;
+                    if (cert != null)
+                    {
+                        certSelector = delegate { return cert; };
+                    }
+                    RemoteCertificateValidationCallback serverValidator = delegate { return true; }; // WCGW?
+                    var ssl = new SslStream(stream, false, serverValidator, certSelector);
                     await ssl.AuthenticateAsClientAsync(host);
+                    if(ssl.LocalCertificate != null)
+                    {
+                        Console.WriteLine($"Local cert: {ssl.LocalCertificate.Subject}");
+                    }
                     stream = ssl;
                 }
 
@@ -86,7 +110,11 @@ static class RedisPing
         }
         catch(Exception ex)
         {
-            await Console.Error.WriteLineAsync(ex.Message);
+            while(ex != null)
+            {
+                await Console.Error.WriteLineAsync(ex.Message);
+                ex = ex.InnerException;
+            }            
         }
     }
     private static async Task ExecuteWithTimeout(IPipeConnection connection, string password, int timeoutMilliseconds = 5000)
@@ -149,7 +177,7 @@ static class RedisPing
         }
     }
 
-    static async Task DoTheThingViaPipelines(string host, int port, string password, bool useTls)
+    static async Task DoTheThingViaPipelines(string host, int port, string password, bool useTls, X509Certificate cert)
     {
         try
         {
