@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Buffers;
 using System.Buffers.Text;
 using System.IO;
@@ -13,29 +14,49 @@ using System.Threading.Tasks;
 
 static class RedisPing
 {
+    class TestCase
+    {
+        public string Name { get; set; }
+        public string Host { get; set; }
+        public int Port { get; set; }
+        public string Password { get; set; }
+        public bool UseTls { get; set; }
+    }
+    private static bool ShowDetails
+    {
+        get
+        {
+#if DEBUG
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
     static async Task Main()
     {
-        // need to put these somewhere that isn't the repo; maybe a json file that
-        // is in the .gitignore?
-        int port = 6379;
-        string host = "localhost";
-        string password = null; // <=== azure auth key
-        bool useTls = false;
+        foreach(var path in Directory.EnumerateFiles("Tests", "*.json"))
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                var test = JsonConvert.DeserializeObject<TestCase>(json);
+                await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
 
-        // ***TODO***: put azure details here:
-        host = "****";
-        port = 6380;
-        password = "";
-        useTls = true;
+                await Console.Error.WriteLineAsync("via TcpClient...");
+                await DoTheThingViaTcpClient(test.Host, test.Port, test.Password, test.UseTls);
+                await Console.Error.WriteLineAsync();
 
-        await Console.Error.WriteLineAsync("*** via TcpClient ***");
-        await DoTheThingViaTcpClient(host, port, password, useTls);
-
-        await Console.Error.WriteLineAsync();
-        await Console.Error.WriteLineAsync();
-
-        await Console.Error.WriteLineAsync("*** via raw pipelines ***");
-        await DoTheThingViaPipelines(host, port, password, useTls);
+                await Console.Error.WriteLineAsync("via Pipelines...");
+                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls);
+                await Console.Error.WriteLineAsync();
+                await Console.Error.WriteLineAsync();
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync($"Error processing '{path}': '{ex.Message}'");
+            }
+        }
     }
 
     static async Task DoTheThingViaTcpClient(string host, int port, string password, bool useTls)
@@ -45,7 +66,7 @@ static class RedisPing
             using (var pool = new MemoryPool())
             using (var client = new TcpClient())
             {
-                await Console.Out.WriteLineAsync($"connecting to {host}:{port}...");
+                await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to {host}:{port}..." : "connecting to host");
                 await client.ConnectAsync(host, port);
                 Stream stream = client.GetStream();
 
@@ -59,7 +80,7 @@ static class RedisPing
 
                 using (var pipe = new StreamPipeConnection(new PipeOptions(pool), stream))
                 {
-                    await Execute(pipe, password);
+                    await ExecuteWithTimeout(pipe, password);
                 }
             }
         }
@@ -68,7 +89,14 @@ static class RedisPing
             await Console.Error.WriteLineAsync(ex.Message);
         }
     }
-
+    private static async Task ExecuteWithTimeout(IPipeConnection connection, string password, int timeoutMilliseconds = 5000)
+    {
+        var timeout = Task.Delay(timeoutMilliseconds);
+        var success = Execute(connection, password);
+        var winner = await Task.WhenAny(success, timeout);
+        await Console.Out.WriteLineAsync(winner == success ? "(complete)" : "(timeout)");
+    }
+    
     private static async Task Execute(IPipeConnection connection, string password)
     {
         await Console.Out.WriteLineAsync($"executing...");
@@ -127,21 +155,18 @@ static class RedisPing
         {
 
 
-            await Console.Out.WriteLineAsync($"resolving ip of '{host}'...");
+            await Console.Out.WriteLineAsync(ShowDetails ? $"resolving ip of '{host}'..." : "resolving ip of host");
             var ip = (await Dns.GetHostAddressesAsync(host)).First();
 
-            await Console.Out.WriteLineAsync($"connecting to '{ip}:{port}'...");
-            using (var connection = await SocketConnection.ConnectAsync(new IPEndPoint(ip, port)))
+            await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to '{ip}:{port}'..." : "connecting to host");
+            using (var socket = await SocketConnection.ConnectAsync(new IPEndPoint(ip, port)))
             {
-                if (useTls)
+                IPipeConnection connection = socket;
+                if (useTls) // need to think about the disposal story here?
                 {
-                    var secureConnection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
-                    await Execute(secureConnection, password);
+                    connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
                 }
-                else
-                {
-                    await Execute(connection, password);
-                }
+                await ExecuteWithTimeout(connection, password);
             }
         }
         catch (Exception ex)
@@ -154,7 +179,8 @@ static class RedisPing
     {
         // keep things simple: using the text protocol guarantees a text-protocol response
         // (in real code we'd use the RESP format, but ... meh)
-        await Console.Out.WriteLineAsync($">> sending '{command}'...");
+        var msg = (!ShowDetails && command.StartsWith("AUTH", StringComparison.OrdinalIgnoreCase)) ? "AUTH ****" : command;
+        await Console.Out.WriteLineAsync($">> sending '{msg}'...");
         var buffer = output.Alloc();
 
         buffer.WriteUtf8(command.AsReadOnlySpan());

@@ -3,13 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <OutputType>Exe</OutputType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
+
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.1-beta1" />
     <PackageReference Include="System.IO.Pipelines.Extensions" Version="0.1.0-e171221-1" />
     <PackageReference Include="System.IO.Pipelines.Networking.Sockets" Version="0.1.0-e171221-1" />
     <PackageReference Include="System.IO.Pipelines.Text.Primitives" Version="0.1.0-e171221-1" />
@@ -19,6 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Leto\Leto.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Tests\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
