@@ -23,10 +23,10 @@ static class RedisPing
         bool useTls = false;
 
         // ***TODO***: put azure details here:
-        // host = "your-azure-endpoint.redis.cache.windows.net";
-        // port = 6380;
-        // password = "your access key";
-        // useTls = true;
+        host = "****";
+        port = 6380;
+        password = "";
+        useTls = true;
 
         await Console.Error.WriteLineAsync("*** via TcpClient ***");
         await DoTheThingViaTcpClient(host, port, password, useTls);
@@ -135,10 +135,13 @@ static class RedisPing
             {
                 if (useTls)
                 {
-                    throw new NotImplementedException("some pipe wrapping goes here?");
+                    var secureConnection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
+                    await Execute(secureConnection, password);
                 }
-
-                await Execute(connection, password);
+                else
+                {
+                    await Execute(connection, password);
+                }
             }
         }
         catch (Exception ex)
@@ -155,6 +158,7 @@ static class RedisPing
         var buffer = output.Alloc();
 
         buffer.WriteUtf8(command.AsReadOnlySpan());
+        buffer.Ensure(CRLF.Length);
         buffer.Write(CRLF);
         buffer.Commit();
         await buffer.FlushAsync();

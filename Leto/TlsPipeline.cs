@@ -8,12 +8,12 @@ namespace Leto
 {
     public static class TlsPipeline
     {
-        public static Task<TlsClientPipeline> AuthenticateClient(IPipe inputPipe, ClientOptions clientOptions)
+        public static async Task<TlsClientPipeline> AuthenticateClient(IPipeConnection inputPipe, ClientOptions clientOptions)
         {
             var ctx = Interop.OpenSsl.SSL_CTX_new(Interop.OpenSsl.TLS_client_method());
             var pipeline = new TlsClientPipeline(inputPipe, ctx, clientOptions);
-
-            throw new NotImplementedException();
+            await pipeline.AuthenticateAsync();
+            return pipeline;
         }
     }
 }
