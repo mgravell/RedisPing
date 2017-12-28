@@ -181,8 +181,6 @@ static class RedisPing
     {
         try
         {
-
-
             await Console.Out.WriteLineAsync(ShowDetails ? $"resolving ip of '{host}'..." : "resolving ip of host");
             var ip = (await Dns.GetHostAddressesAsync(host)).First();
 
