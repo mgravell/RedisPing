@@ -146,35 +146,54 @@ namespace RedisPing
 
 
             var input = connection.Input;
-            while (true)
+            while (true) // outer loop is successive calls to ReadAsync
             {
                 await Console.Out.WriteLineAsync($"awaiting response...");
                 var result = await input.ReadAsync();
 
                 var buffer = result.Buffer;
-                await Console.Out.WriteLineAsync($"checking response ({buffer.Length} bytes)...");
-
                 if (buffer.IsEmpty && result.IsCompleted)
                 {
                     await Console.Out.WriteLineAsync($"done");
                     break;
                 }
+                
+                // we could have 0/1/many (or fractional) frames in the input buffer; try to consume
+                // whatever we can
+                bool haveAnyFrame = false;
+                while (!buffer.IsEmpty && RespReply.TryParse(buffer, out var response, out var end))
+                {
+                    haveAnyFrame = true;
 
-                if (!RespReply.TryParse(buffer, out var response, out var end))
+                    await Console.Out.WriteLineAsync($"checking response ({buffer.Length} bytes)...");
+
+                    // process what we received; note that since this data isn't "preserved", it is
+                    // only valid until we .Advance past it
+                    await ProcessResponse(connection.Output, response);
+
+                    // we read a frame; slice forward and try again
+                    buffer = buffer.Slice(end);
+                }
+
+                if(!haveAnyFrame)
                 {
                     await Console.Out.WriteLineAsync($"incomplete");
-                    input.Advance(buffer.Start, buffer.End);
-                    continue;
                 }
+                // we have *consumed* up to the current start of buffer, and
+                // we have *inspeccted* to the end of the buffer
+                input.Advance(buffer.Start, buffer.End);
+            }
+        }
 
-                var reply = response.ToString();
-                await Console.Out.WriteLineAsync($"<< received: '{reply}' ({response.Type})");
-                if (string.Equals(reply, "+PONG", StringComparison.OrdinalIgnoreCase))
-                {
-                    await WriteSimpleMessage(connection.Output, "QUIT");
-                    connection.Output.Complete();
-                }
-                input.Advance(end, end);
+        private static async Task ProcessResponse(IPipeWriter output, RespReply response)
+        {
+            var reply = response.ToString();
+            await Console.Out.WriteLineAsync($"<< received: '{reply}' ({response.Type})");
+            if (response.Type == MessageType.SimpleString &&
+                string.Equals(reply, "PONG", StringComparison.OrdinalIgnoreCase))
+            {
+                await WriteSimpleMessage(output, "QUIT");
+                output.Complete();
             }
         }
 
