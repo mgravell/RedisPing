@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
+using Newtonsoft.Json;
 using System;
 using System.Buffers;
 using System.Buffers.Text;
 using System.IO;
 using System.IO.Pipelines;
-using System.IO.Pipelines.Networking.Sockets;
 using System.IO.Pipelines.Text.Primitives;
 using System.Linq;
 using System.Net;
@@ -38,46 +38,48 @@ static class RedisPing
     static async Task Main()
     {
         var testRoot = "Tests";
-        foreach (var path in Directory.EnumerateFiles(testRoot, "*.json"))
+        using (var pool = new MemoryPool())
         {
-            try
+            foreach (var path in Directory.EnumerateFiles(testRoot, "*.json"))
             {
-                var json = File.ReadAllText(path);
-                var test = JsonConvert.DeserializeObject<TestCase>(json);
-                X509Certificate cert = null;
-                if (test.CertificatePath != null)
+                try
                 {
-                    cert = new X509Certificate2(Path.Combine(testRoot, test.CertificatePath));
+                    var json = File.ReadAllText(path);
+                    var test = JsonConvert.DeserializeObject<TestCase>(json);
+                    X509Certificate cert = null;
+                    if (test.CertificatePath != null)
+                    {
+                        cert = new X509Certificate2(Path.Combine(testRoot, test.CertificatePath));
 
+                    }
+
+                    await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
+                    if (cert != null)
+                    {
+                        await Console.Out.WriteLineAsync($"Client certificate: {cert.Subject}");
+                    }
+
+                    await Console.Error.WriteLineAsync("via TcpClient...");
+                    // await DoTheThingViaTcpClient(pool, test.Host, test.Port, test.Password, test.UseTls, cert);
+                    await Console.Error.WriteLineAsync();
+
+                    await Console.Error.WriteLineAsync("via Pipelines...");
+                    await DoTheThingViaPipelines(pool, test.Host, test.Port, test.Password, test.UseTls, cert);
+                    await Console.Error.WriteLineAsync();
+                    await Console.Error.WriteLineAsync();
                 }
-
-                await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
-                if(cert != null)
+                catch (Exception ex)
                 {
-                    await Console.Out.WriteLineAsync($"Client certificate: {cert.Subject}");
+                    await Console.Error.WriteLineAsync($"Error processing '{path}': '{ex.Message}'");
                 }
-
-                await Console.Error.WriteLineAsync("via TcpClient...");
-                await DoTheThingViaTcpClient(test.Host, test.Port, test.Password, test.UseTls, cert);
-                await Console.Error.WriteLineAsync();
-
-                await Console.Error.WriteLineAsync("via Pipelines...");
-                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls, cert);
-                await Console.Error.WriteLineAsync();
-                await Console.Error.WriteLineAsync();
-            }
-            catch (Exception ex)
-            {
-                await Console.Error.WriteLineAsync($"Error processing '{path}': '{ex.Message}'");
             }
         }
     }
 
-    static async Task DoTheThingViaTcpClient(string host, int port, string password, bool useTls, X509Certificate cert)
+    static async Task DoTheThingViaTcpClient(MemoryPool pool, string host, int port, string password, bool useTls, X509Certificate cert)
     {
         try
         {
-            using (var pool = new MemoryPool())
             using (var client = new TcpClient())
             {
                 await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to {host}:{port}..." : "connecting to host");
@@ -177,22 +179,21 @@ static class RedisPing
         }
     }
 
-    static async Task DoTheThingViaPipelines(string host, int port, string password, bool useTls, X509Certificate cert)
+    static async Task DoTheThingViaPipelines(MemoryPool pool, string host, int port, string password, bool useTls, X509Certificate cert)
     {
         try
         {
 
 
-            await Console.Out.WriteLineAsync(ShowDetails ? $"resolving ip of '{host}'..." : "resolving ip of host");
-            var ip = (await Dns.GetHostAddressesAsync(host)).First();
-
-            await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to '{ip}:{port}'..." : "connecting to host");
-            using (var socket = await SocketConnection.ConnectAsync(new IPEndPoint(ip, port)))
+            await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to '{host}:{port}'..." : "connecting to host");
+            using (var socket = await SocketTransportFactory.ConnectAsync(new DnsEndPoint(host, port), pool))
             {
                 IPipeConnection connection = socket;
                 if (useTls) // need to think about the disposal story here?
                 {
+                    await Console.Out.WriteLineAsync("authenticating client...");
                     connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
+                    await Console.Out.WriteLineAsync("authenticated");
                 }
                 await ExecuteWithTimeout(connection, password);
             }

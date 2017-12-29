@@ -181,7 +181,7 @@ namespace Leto
             }
         }
 
-        private ValueAwaiter<FlushResult> EncryptAsync(ReadableBuffer unencrypted, IPipeWriter writer)
+        private WritableBufferAwaitable EncryptAsync(ReadableBuffer unencrypted, IPipeWriter writer)
         {
             var handle = GCHandle.Alloc(writer);
             try
@@ -201,7 +201,7 @@ namespace Leto
             }
         }
 
-        private ValueAwaiter<FlushResult> DecryptAsync(ReadableBuffer messageBuffer, Pipe readInnerPipe)
+        private WritableBufferAwaitable DecryptAsync(ReadableBuffer messageBuffer, Pipe readInnerPipe)
         {
             var decryptedData = readInnerPipe.Writer.Alloc();
             BIO_set_data(_readBio, ref messageBuffer);
