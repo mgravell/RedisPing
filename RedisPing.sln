@@ -7,11 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisPing", "RedisPing\Redi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leto", "Leto\Leto.csproj", "{EED2FFFC-45A2-4B5C-AD64-785400BA7975}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Protocols.Abstractions", "..\KestrelHttpServer\src\Protocols.Abstractions\Protocols.Abstractions.csproj", "{2CCC6295-5F9E-4766-AC64-0368652564F8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kestrel.Transport.Sockets", "..\KestrelHttpServer\src\Kestrel.Transport.Sockets\Kestrel.Transport.Sockets.csproj", "{9F0E67A7-26E5-4DE5-AE76-CE2EBA7FB175}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kestrel.Transport.Abstractions", "..\KestrelHttpServer\src\Kestrel.Transport.Abstractions\Kestrel.Transport.Abstractions.csproj", "{C41841CE-FB0B-4BE5-9655-846794BB5A13}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kestrel.Transport.Abstractions", "..\KestrelHttpServer\src\Kestrel.Transport.Abstractions\Kestrel.Transport.Abstractions.csproj", "{2F62F5FA-5F5F-4CA8-8116-11B9B183FF80}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kestrel.Transport.Sockets", "..\KestrelHttpServer\src\Kestrel.Transport.Sockets\Kestrel.Transport.Sockets.csproj", "{4842B3D3-EA25-45AB-9CCF-D30EFE1E04BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Protocols.Abstractions", "..\KestrelHttpServer\src\Protocols.Abstractions\Protocols.Abstractions.csproj", "{1746B6D6-014A-45C8-BE67-689A6A38C1C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,18 +27,18 @@ Global
 		{EED2FFFC-45A2-4B5C-AD64-785400BA7975}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EED2FFFC-45A2-4B5C-AD64-785400BA7975}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EED2FFFC-45A2-4B5C-AD64-785400BA7975}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2CCC6295-5F9E-4766-AC64-0368652564F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2CCC6295-5F9E-4766-AC64-0368652564F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2CCC6295-5F9E-4766-AC64-0368652564F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2CCC6295-5F9E-4766-AC64-0368652564F8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C41841CE-FB0B-4BE5-9655-846794BB5A13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C41841CE-FB0B-4BE5-9655-846794BB5A13}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C41841CE-FB0B-4BE5-9655-846794BB5A13}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C41841CE-FB0B-4BE5-9655-846794BB5A13}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4842B3D3-EA25-45AB-9CCF-D30EFE1E04BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4842B3D3-EA25-45AB-9CCF-D30EFE1E04BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4842B3D3-EA25-45AB-9CCF-D30EFE1E04BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4842B3D3-EA25-45AB-9CCF-D30EFE1E04BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F0E67A7-26E5-4DE5-AE76-CE2EBA7FB175}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F0E67A7-26E5-4DE5-AE76-CE2EBA7FB175}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F0E67A7-26E5-4DE5-AE76-CE2EBA7FB175}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F0E67A7-26E5-4DE5-AE76-CE2EBA7FB175}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F62F5FA-5F5F-4CA8-8116-11B9B183FF80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F62F5FA-5F5F-4CA8-8116-11B9B183FF80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F62F5FA-5F5F-4CA8-8116-11B9B183FF80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F62F5FA-5F5F-4CA8-8116-11B9B183FF80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1746B6D6-014A-45C8-BE67-689A6A38C1C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1746B6D6-014A-45C8-BE67-689A6A38C1C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1746B6D6-014A-45C8-BE67-689A6A38C1C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1746B6D6-014A-45C8-BE67-689A6A38C1C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

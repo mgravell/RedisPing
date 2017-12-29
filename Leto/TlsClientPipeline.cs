@@ -34,6 +34,7 @@ namespace Leto
             _writeInnerPipe = new Pipe(new PipeOptions(System.Buffers.MemoryPool.Default));
             _context = context;
             _ssl = SSL_new(_context);
+
             _clientOptions = clientOptions;
 
             _readBio = s_ReadBio.New();
@@ -47,6 +48,11 @@ namespace Leto
 
         private async Task HandshakeLoop()
         {
+            if (!string.IsNullOrEmpty(_clientOptions.CertificateFile))
+            {
+                LoadCertificate(await System.IO.File.ReadAllBytesAsync(_clientOptions.CertificateFile));
+            }
+
             await ProcessHandshakeMessage(default, _innerConnection.Output);
 
             try
@@ -95,6 +101,22 @@ namespace Leto
             }
         }
 
+        private void LoadCertificate(byte[] certificateData)
+        {
+            var pkcs12 = d2i_PKCS12(certificateData);
+            var (key, cert) = PKCS12_parse(pkcs12, _clientOptions.CertificatePassword);
+            try
+            {
+                SSL_use_certificate(_ssl, cert);
+                SSL_use_PrivateKey(_ssl, key);
+            }
+            finally
+            {
+                key.Free();
+                cert.Free();
+            }
+        }
+
         private async Task StartWriting()
         {
             await _handshakeTask.Task.ConfigureAwait(false);
@@ -105,15 +127,15 @@ namespace Leto
                 while (true)
                 {
                     var result = await _writeInnerPipe.Reader.ReadAsync();
-
                     var buffer = result.Buffer;
-                    if (buffer.IsEmpty && result.IsCompleted)
-                    {
-                        break;
-                    }
 
                     try
                     {
+
+                        if (buffer.IsEmpty && result.IsCompleted)
+                        {
+                            break;
+                        }
                         while (buffer.Length > 0)
                         {
                             ReadableBuffer messageBuffer;
@@ -140,6 +162,7 @@ namespace Leto
             finally
             {
                 // Need to shut down the channels properly not sure how this should occur
+                _innerConnection.Output.Complete();
             }
         }
 
@@ -177,7 +200,7 @@ namespace Leto
             }
             finally
             {
-
+                //_readInnerPipe.Writer.Complete();
             }
         }
 

@@ -7,10 +7,7 @@ namespace Leto
 {
     public class ClientOptions
     {
-        public delegate X509Certificate2 GetClientCertificateDelegate(TlsClientPipeline sender);
-
-        public GetClientCertificateDelegate ClientCertificateCallback { get; set; }
-
-
+        public string CertificatePassword { internal get; set; }
+        public string CertificateFile { get; set; }
     }
 }

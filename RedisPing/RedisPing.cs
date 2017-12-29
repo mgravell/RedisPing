@@ -25,7 +25,8 @@ namespace RedisPing
         public bool UseTls { get; set; }
         public string CertificatePath { get; set; }
     }
-    static class Program {
+    static class Program
+    {
         private static bool ShowDetails
         {
             get
@@ -49,10 +50,11 @@ namespace RedisPing
                         var json = File.ReadAllText(path);
                         var test = JsonConvert.DeserializeObject<TestCase>(json);
                         X509Certificate cert = null;
+                        string certPath = null;
                         if (test.CertificatePath != null)
                         {
-                            cert = new X509Certificate2(Path.Combine(testRoot, test.CertificatePath));
-
+                            certPath = Path.Combine(testRoot, test.CertificatePath);
+                            cert = new X509Certificate2(certPath);
                         }
 
                         await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
@@ -61,14 +63,14 @@ namespace RedisPing
                             await Console.Out.WriteLineAsync($"Client certificate: {cert.Subject}");
                         }
 
-                        await Console.Error.WriteLineAsync("via TcpClient...");
+                        await Console.Out.WriteLineAsync("via TcpClient...");
                         await DoTheThingViaTcpClient(pool, test.Host, test.Port, test.Password, test.UseTls, cert);
-                        await Console.Error.WriteLineAsync();
+                        await Console.Out.WriteLineAsync();
 
-                        await Console.Error.WriteLineAsync("via Pipelines...");
-                        await DoTheThingViaPipelines(pool, test.Host, test.Port, test.Password, test.UseTls, cert);
-                        await Console.Error.WriteLineAsync();
-                        await Console.Error.WriteLineAsync();
+                        await Console.Out.WriteLineAsync("via Pipelines...");
+                        await DoTheThingViaPipelines(pool, test.Host, test.Port, test.Password, test.UseTls, certPath);
+                        await Console.Out.WriteLineAsync();
+                        await Console.Out.WriteLineAsync();
                     }
                     catch (Exception ex)
                     {
@@ -101,7 +103,7 @@ namespace RedisPing
                         await ssl.AuthenticateAsClientAsync(host);
                         if (ssl.LocalCertificate != null)
                         {
-                            Console.WriteLine($"Local cert: {ssl.LocalCertificate.Subject}");
+                            await Console.Out.WriteLineAsync($"Local cert: {ssl.LocalCertificate.Subject}");
                         }
                         stream = ssl;
                     }
@@ -157,7 +159,7 @@ namespace RedisPing
                     await Console.Out.WriteLineAsync($"done");
                     break;
                 }
-                
+
                 // we could have 0/1/many (or fractional) frames in the input buffer; try to consume
                 // whatever we can
                 bool haveAnyFrame = false;
@@ -175,7 +177,7 @@ namespace RedisPing
                     buffer = buffer.Slice(end);
                 }
 
-                if(!haveAnyFrame)
+                if (!haveAnyFrame)
                 {
                     await Console.Out.WriteLineAsync($"incomplete");
                 }
@@ -197,12 +199,10 @@ namespace RedisPing
             }
         }
 
-        static async Task DoTheThingViaPipelines(MemoryPool pool, string host, int port, string password, bool useTls, X509Certificate cert)
+        static async Task DoTheThingViaPipelines(MemoryPool pool, string host, int port, string password, bool useTls, string certificateFile)
         {
             try
             {
-
-
                 await Console.Out.WriteLineAsync(ShowDetails ? $"connecting to '{host}:{port}'..." : "connecting to host");
                 using (var socket = await SocketTransportFactory.ConnectAsync(new DnsEndPoint(host, port), pool))
                 {
@@ -210,7 +210,8 @@ namespace RedisPing
                     if (useTls) // need to think about the disposal story here?
                     {
                         await Console.Out.WriteLineAsync("authenticating client...");
-                        connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
+                        connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions
+                        { CertificateFile = certificateFile });
                         await Console.Out.WriteLineAsync("authenticated");
                     }
                     await ExecuteWithTimeout(connection, password);
