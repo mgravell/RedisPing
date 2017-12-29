@@ -1,13 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Leto.Interop
 {
-    public static partial class OpenSsl
+    public static partial class LibCrypto
     {
-        public class SSL_CTX:SafeHandle
+        public class PKCS12 : SafeHandle
         {
-            private SSL_CTX() : base(IntPtr.Zero, true)
+            private PKCS12() : base(IntPtr.Zero, true)
             {
             }
 
@@ -17,8 +19,7 @@ namespace Leto.Interop
             {
                 if (IsInvalid) return false;
 
-                SSL_CTX_free(handle);
-
+                PKCS12_free(handle);
                 return true;
             }
         }

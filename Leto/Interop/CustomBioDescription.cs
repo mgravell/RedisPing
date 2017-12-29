@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using static Leto.Interop.LibCrypto;
 
 namespace Leto.Interop
