@@ -135,18 +135,21 @@ namespace RedisPing
         {
             await Console.Out.WriteLineAsync($"executing...");
 
+            // send some messages down the wire...
+
             if (password != null)
             {
-                await WriteSimpleMessage(connection.Output, $"AUTH \"{password}\"");
                 // a "success" for this would be a response that says "+OK"
+                await WriteSimpleMessage(connection.Output, $"AUTH \"{password}\"");
             }
-
             await WriteSimpleMessage(connection.Output, "ECHO \"noisy in here\"");
-            // note that because of RESP, this actually gives 2 replies; don't worry about it :)
-
             await WriteSimpleMessage(connection.Output, "PING");
 
-
+            // now process the responses
+            await RunMainParserLoop(connection);
+        }
+        private static async Task RunMainParserLoop(IPipeConnection connection)
+        {
             var input = connection.Input;
             while (true) // outer loop is successive calls to ReadAsync
             {
@@ -163,26 +166,31 @@ namespace RedisPing
                 // we could have 0/1/many (or fractional) frames in the input buffer; try to consume
                 // whatever we can
                 bool haveAnyFrame = false;
+                await Console.Out.WriteLineAsync($"checking response ({buffer.Length} bytes)...");
                 while (!buffer.IsEmpty && RespReply.TryParse(buffer, out var response, out var end))
                 {
                     haveAnyFrame = true;
 
-                    await Console.Out.WriteLineAsync($"checking response ({buffer.Length} bytes)...");
-
-                    // process what we received; note that since this data isn't "preserved", it is
-                    // only valid until we .Advance past it
+                    // process the frame that we received; nothing has been allocated so far - we just
+                    // have placeholders to the structured data in the memory pool
+                    // note that since this data isn't "preserved", it is only valid until we
+                    // call .Advance to move past it (releasing the chunks)
                     await ProcessResponse(connection.Output, response);
 
                     // we read a frame; slice forward and try again
                     buffer = buffer.Slice(end);
                 }
 
-                if (!haveAnyFrame)
-                {
+                if (!haveAnyFrame) // no frames parsed successfully;
+                { // this usually means either large messages or packet fragmentation
                     await Console.Out.WriteLineAsync($"incomplete");
                 }
+
                 // we have *consumed* up to the current start of buffer, and
-                // we have *inspeccted* to the end of the buffer
+                // we have *inspeccted* to the end of the buffer; note that this
+                // is how the back-buffer of unprocessed data is managed automatically
+                // for us - it releases everything that we say has been consumed; anything
+                // beyond that will be offered up again
                 input.Advance(buffer.Start, buffer.End);
             }
         }
