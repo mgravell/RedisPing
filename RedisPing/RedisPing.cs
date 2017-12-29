@@ -151,8 +151,8 @@ namespace RedisPing
                 await Console.Out.WriteLineAsync($"awaiting response...");
                 var result = await input.ReadAsync();
 
-                await Console.Out.WriteLineAsync($"checking response...");
                 var buffer = result.Buffer;
+                await Console.Out.WriteLineAsync($"checking response ({buffer.Length} bytes)...");
 
                 if (buffer.IsEmpty && result.IsCompleted)
                 {
