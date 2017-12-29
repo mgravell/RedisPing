@@ -7,3 +7,4 @@ Tests/
 /openssl/openssl.exe
 /openssl/openssl.pdb
 /openssl/ssleay32.dll
+/RedisPing/RedisPing.csproj.user

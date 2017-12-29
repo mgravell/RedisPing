@@ -48,20 +48,9 @@ namespace Leto
 
         private async Task HandshakeLoop()
         {
-            if (!string.IsNullOrEmpty(_clientOptions.CertificatePassword) && !string.IsNullOrEmpty(_clientOptions.CertificateFile))
+            if (!string.IsNullOrEmpty(_clientOptions.CertificateFile))
             {
-                var pkcs12 = d2i_PKCS12(await System.IO.File.ReadAllBytesAsync(_clientOptions.CertificateFile));
-                var (key, cert) = PKCS12_parse(pkcs12, _clientOptions.CertificatePassword);
-                try
-                {
-                    SSL_use_certificate(_ssl, cert);
-                    SSL_use_PrivateKey(_ssl, key);
-                }
-                finally
-                {
-                    key.Free();
-                    cert.Free();
-                }
+                LoadCertificate(await System.IO.File.ReadAllBytesAsync(_clientOptions.CertificateFile));
             }
 
             await ProcessHandshakeMessage(default, _innerConnection.Output);
@@ -112,6 +101,22 @@ namespace Leto
             }
         }
 
+        private void LoadCertificate(byte[] certificateData)
+        {
+            var pkcs12 = d2i_PKCS12(certificateData);
+            var (key, cert) = PKCS12_parse(pkcs12, _clientOptions.CertificatePassword);
+            try
+            {
+                SSL_use_certificate(_ssl, cert);
+                SSL_use_PrivateKey(_ssl, key);
+            }
+            finally
+            {
+                key.Free();
+                cert.Free();
+            }
+        }
+
         private async Task StartWriting()
         {
             await _handshakeTask.Task.ConfigureAwait(false);
@@ -122,15 +127,15 @@ namespace Leto
                 while (true)
                 {
                     var result = await _writeInnerPipe.Reader.ReadAsync();
-
                     var buffer = result.Buffer;
-                    if (buffer.IsEmpty && result.IsCompleted)
-                    {
-                        break;
-                    }
 
                     try
                     {
+
+                        if (buffer.IsEmpty && result.IsCompleted)
+                        {
+                            break;
+                        }
                         while (buffer.Length > 0)
                         {
                             ReadableBuffer messageBuffer;
@@ -195,7 +200,7 @@ namespace Leto
             }
             finally
             {
-                _readInnerPipe.Writer.Complete();
+                //_readInnerPipe.Writer.Complete();
             }
         }
 

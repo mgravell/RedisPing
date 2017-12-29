@@ -52,7 +52,7 @@ static class RedisPing
                 }
 
                 await Console.Out.WriteLineAsync($"Test: {test.Name ?? test.Host}");
-                if(cert != null)
+                if (cert != null)
                 {
                     await Console.Out.WriteLineAsync($"Client certificate: {cert.Subject}");
                 }
@@ -62,7 +62,7 @@ static class RedisPing
                 await Console.Error.WriteLineAsync();
 
                 await Console.Error.WriteLineAsync("via Pipelines...");
-                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls, cert);
+                await DoTheThingViaPipelines(test.Host, test.Port, test.Password, test.UseTls, Path.Combine(testRoot, test.CertificatePath));
                 await Console.Error.WriteLineAsync();
                 await Console.Error.WriteLineAsync();
             }
@@ -84,7 +84,7 @@ static class RedisPing
                 await client.ConnectAsync(host, port);
                 Stream stream = client.GetStream();
 
-                if(useTls)
+                if (useTls)
                 {
                     await Console.Out.WriteLineAsync($"authenticating host...");
                     LocalCertificateSelectionCallback certSelector = null;
@@ -95,7 +95,7 @@ static class RedisPing
                     RemoteCertificateValidationCallback serverValidator = delegate { return true; }; // WCGW?
                     var ssl = new SslStream(stream, false, serverValidator, certSelector);
                     await ssl.AuthenticateAsClientAsync(host);
-                    if(ssl.LocalCertificate != null)
+                    if (ssl.LocalCertificate != null)
                     {
                         Console.WriteLine($"Local cert: {ssl.LocalCertificate.Subject}");
                     }
@@ -108,13 +108,13 @@ static class RedisPing
                 }
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            while(ex != null)
+            while (ex != null)
             {
                 await Console.Error.WriteLineAsync(ex.Message);
                 ex = ex.InnerException;
-            }            
+            }
         }
     }
     private static async Task ExecuteWithTimeout(IPipeConnection connection, string password, int timeoutMilliseconds = 5000)
@@ -124,7 +124,7 @@ static class RedisPing
         var winner = await Task.WhenAny(success, timeout);
         await Console.Out.WriteLineAsync(winner == success ? "(complete)" : "(timeout)");
     }
-    
+
     private static async Task Execute(IPipeConnection connection, string password)
     {
         await Console.Out.WriteLineAsync($"executing...");
@@ -177,7 +177,7 @@ static class RedisPing
         }
     }
 
-    static async Task DoTheThingViaPipelines(string host, int port, string password, bool useTls, X509Certificate cert)
+    static async Task DoTheThingViaPipelines(string host, int port, string password, bool useTls, string certificateFile)
     {
         try
         {
@@ -190,7 +190,7 @@ static class RedisPing
                 IPipeConnection connection = socket;
                 if (useTls) // need to think about the disposal story here?
                 {
-                    connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions());
+                    connection = await Leto.TlsPipeline.AuthenticateClient(connection, new Leto.ClientOptions() { CertificateFile = certificateFile });
                 }
                 await ExecuteWithTimeout(connection, password);
             }
@@ -222,7 +222,7 @@ static class RedisPing
         => buffer.WriteUtf8(value.AsReadOnlySpan());
     private static int WriteUtf8(ref this WritableBuffer buffer, ReadOnlySpan<char> value)
     {
-               
+
         if (value.IsEmpty) return 0;
 
         int totalWritten = 0;
@@ -231,7 +231,7 @@ static class RedisPing
         {
             buffer.Ensure(4); // be able to write at least one character (worst case) - but the span obtained could be much bigger
             var status = Encodings.Utf8.FromUtf16(source, buffer.Buffer.Span, out int bytesConsumed, out int bytesWritten);
-            switch(status)
+            switch (status)
             {
                 case OperationStatus.Done:
                 case OperationStatus.DestinationTooSmall:
@@ -246,7 +246,7 @@ static class RedisPing
                     break;
             }
         } while (!source.IsEmpty);
-        return totalWritten;        
+        return totalWritten;
     }
     static void ThrowInvalid(string message) => throw new InvalidOperationException(message);
 }
