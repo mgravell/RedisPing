@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO.Pipelines;
-using System.IO.Pipelines.Text.Primitives;
+using System.Text;
 
 namespace RedisPing
 {
@@ -19,8 +19,20 @@ namespace RedisPing
         private RespReply[] _subItems;
 
         public override string ToString() => AsString();
-        public string AsString() => _payload.GetUtf8Span();
+        public string AsString() // => _payload.GetUtf8Span();
+        {
+            var tmp = _payload;
+            if (tmp.IsEmpty) return "";
 
+            // this is horribly inefficient; where have all the good string functions gone?
+            var memory = tmp.IsSingleSpan ? tmp.First : tmp.ToArray();
+            if(!memory.TryGetArray(out var segment))
+            {
+                segment = new ArraySegment<byte>(memory.ToArray());
+            }
+            return Encoding.UTF8.GetString(segment.Array, segment.Offset, segment.Count);
+        }
+        
         private RespReply(MessageType type, ReadableBuffer payload, RespReply[] subItems = null)
         {   // note that **these buffers are not preserved**; they cannot be used once we have advanced
             Type = type;
@@ -59,8 +71,8 @@ namespace RedisPing
                 case MessageType.BulkString:
                     // length as ASCII followed by CRLF, then that many bytes, then CRLF
                     if (!TrySliceToCrLf(buffer, out payload, out end)) return false;
-                    int len = checked((int)ReadableBufferExtensions.GetUInt32(payload));
-                    //int len = ParseInt32(payload);
+                    int len = ParseInt32(payload);
+
                     buffer = buffer.Slice(end);
                     if (buffer.Length < len + 2) return false; // payload+CRLF bytes not present
 
@@ -78,5 +90,33 @@ namespace RedisPing
             }
         }
 
+        private static int ParseInt32(ReadableBuffer payload)
+        {
+            int Combine(int value, Span<byte> chars)
+            {
+                for(int i = 0; i < chars.Length; i++)
+                {
+                    int digit = chars[i] - (byte)'0';
+                    if (digit < 0 || digit > 9) throw new FormatException();
+                    value = checked((value * 10) + digit);
+                }
+                return value;
+            }
+
+            if (payload.IsEmpty) throw new FormatException();
+            int result = 0;
+            if (payload.IsSingleSpan)
+            {
+                result = Combine(result, payload.First.Span);
+            }
+            else
+            {
+                foreach(var range in payload)
+                {
+                    result = Combine(result, range.Span);
+                }
+            }
+            return result;
+        }
     }
 }

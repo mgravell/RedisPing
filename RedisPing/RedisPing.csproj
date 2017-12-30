@@ -5,17 +5,18 @@
     <OutputType>Exe</OutputType>
     <LangVersion>latest</LangVersion>
     <KestrelTargetVer>0.1.0-e171215-1</KestrelTargetVer>
+    <UnsafeVer>4.5.0-preview1-26021-02</UnsafeVer>
   </PropertyGroup>
 
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1-beta1" />
-    <PackageReference Include="System.IO.Pipelines.Extensions" Version="$(KestrelTargetVer)" />
-    <PackageReference Include="System.IO.Pipelines.Text.Primitives" Version="$(KestrelTargetVer)" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="$(UnsafeVer)" />
+    <PackageReference Include="System.IO.Pipelines" Version="$(KestrelTargetVer)" />
     <PackageReference Include="System.Memory" Version="4.5.0-preview1-26021-02" />
-    <PackageReference Include="System.Text.Primitives" Version="$(KestrelTargetVer)" />
-    <PackageReference Include="System.Text.Formatting" Version="$(KestrelTargetVer)" />
-    <PackageReference Include="System.Buffers.Experimental" Version="$(KestrelTargetVer)" />
+    
+    <!-- not actually using this yet -->
+    <PackageReference Include="System.Buffers.Primitives" Version="$(KestrelTargetVer)" /> <!--0.1.0-e171230-2-->
   </ItemGroup>
 
   <ItemGroup>
